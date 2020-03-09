@@ -30,7 +30,7 @@ function HexPillar(props) {
     hexFaceShape.lineTo(0.5 * w, 0)
     hexFaceShape.lineTo(0, 0.25 * h)
     hexFaceShape.lineTo(0, 0.75 * h)
-    const { userData: { depth } } = props;
+    const { userData: { pillarHeight } } = props;
     // props.position = getPosition(props.userData.row, props.userData.column);
     // var geometry = new THREE.Geometry();
 
@@ -61,7 +61,7 @@ function HexPillar(props) {
         >
             <meshStandardMaterial attach="material" color={hovered ? 'hotpink' : 'orange'} />
             <extrudeGeometry attach="geometry" args={[hexFaceShape, { bevelEnabled: false, steps: 2,
-	depth: depth }]}>
+	depth: pillarHeight }]}>
                 {/* <vector3 attach="vertices" args={[0, 0, 0.75 * h]}/>
                 <vector3 attach="vertices" args={[0.5 * w, 0, h]}/>
                 <vector3 attach="vertices" args={[w, 0, 0.75 * h]}/>

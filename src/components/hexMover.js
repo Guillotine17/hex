@@ -12,7 +12,7 @@ function HexMover(props) {
   // const [position, setPosition] = useState(position)
   const mesh = useRef()
 
-  const [position, set] = useState({x: 0, y:0, z:0});
+  const [position, set] = useState({x: props.position[0], y:props.position[1], z:props.position[2]});
   console.log('input props:', props);
   const [x, y, z] = props.position;
   if (x !== position.x || y !== position.y || z !== position.z) {
@@ -20,7 +20,7 @@ function HexMover(props) {
     set({x, y, z});
     // apset({x, y, z})
   }
-  const {ax, ay, az} = useSpring({ax: position.x, ay: position.y, az: position.z});
+  const {ax, ay, az} = useSpring({to: {ax: position.x, ay: position.y, az: position.z}, from: {ax: 0, ay: 0, az: 0}});
   console.log('position', {ax, ay, az});
   // Rotate mesh every frame, this is outside of React without overhead
   useFrame(() => {
