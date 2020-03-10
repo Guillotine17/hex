@@ -1,119 +1,130 @@
 import React, { useRef, useState } from 'react';
 import { Canvas, useFrame, useThree, extend } from 'react-three-fiber'
-import HexPillar from './components/hexPillar';
+import {HexPillar, getPillars} from './components/hexPillar';
 import { HexMover } from './components/hexMover';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import * as THREE from 'three';
 import {useSprings, animated} from 'react-spring'
-
+import {HEX_SIZE, HEX_W, HEX_H} from './constants';
+import './App.css';
+import * as Stats from 'stats.js';
 // import ReactDOM from 'react-dom'
 
-import './App.css';
 
 extend({ OrbitControls })
+const colors = ['red', 'blue', 'green', 'hotpink', 'brown', 'teal', 'grey'];
+const moversBZoomin = true;
 
-function pillarClicked(props) {
-  console.log(props);
-  const { movers, setMovers, setMoverPosition } = props.userData;
-  const {position: [x, y, z], userData: {pillarHeight}, w, h} = props;
-  if (movers.filter(mover => mover && mover.active).length === 0) {
-    setMovers([...movers, {
-      key: movers.length + 1,
-      active: true,
-      position: [x + .5 * w, y + .5*h, pillarHeight + 1 + z]
-    }]);
-    console.log('position: ', [x + .5 * w, y + .5*h, pillarHeight + 1 + z]);
-  } else {
-    setMovers(movers.map((mover) => ({ ...mover, position: mover.active? [x + .5 * w, y + .5*h, pillarHeight + 1 + z] : mover.position})));
-  }
-  console.log('after set movers', movers);
+function moverToPillar(targetMover, pillar, setMovers, movers) {
+  console.log(pillar)
+  const {position: [x, y, z], userData: {pillarHeight}} = pillar;
+  setMovers(movers.map((mover) => ({ ...mover, position: mover.key === targetMover.key? [x + .5 * HEX_W, y + .5 * HEX_H, pillarHeight + 1 + z] : mover.position})));
 }
+
+function getRandomEntry(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function createStats() {
+  var stats = new Stats();
+  stats.setMode(0);
+  
+  stats.domElement.style.position = 'absolute';
+  stats.domElement.style.left = '0';
+  stats.domElement.style.top = '0';
+  
+  return stats;
+}
+var myStats = createStats();
+document.body.appendChild( myStats.domElement );
 
 
 function App() {
   const [movers, setMovers] = useState([]);
-  // const [springs, setMoverPosition] = useSprings(movers.length, mover => ({...mover, position: mover.position}));
-  let pillars = getPillars(setMovers, ()=>{}, movers);
-
+  let pillars = getPillars(setMovers, movers);
   return (
     <>
-      <Canvas camera={{ fov: 100, position: [0, 0, 50] }}>
+      <Canvas camera={{ fov: 45, position: [0, 0, 100] }}>
         <ambientLight />
         <pointLight position={[10, 10, 10]} />
-        { pillars.map(pillar => <HexPillar {...pillar} /> )}
-        { movers.map(mover => <HexMover key={mover.key} {...mover} /> )}
-
+        <BattleMap {...{pillars, movers, setMovers}}/>
         <CameraControls/>
       </Canvas>
-      <div style={{position: 'absolute', top: '0px', right: '0px'}} >
-        {movers.map(mover =>
-          <div>
-            <button key={mover.key}
-              onClick={ e=> {
-                setMovers(movers.map(tempMover => {
-                  return {...tempMover, active: mover.key === tempMover.key ? !mover.active : tempMover.active }
-                }))
-              }}
-              >
-              { mover.key }
-              { mover.active ? ' active':'' }
-            </button>
-          </div>)}
-        <div>
-          <button onClick={ e=> spawnMover(movers, setMovers)}> + </button>
-        </div>
-      </div>
-      {/* <div style={{position: 'absolute', top: '0px', left: '0px', color: 'white'}}>
-        {springs.map((props) =>
-            <animated.div key={props.key}>
-              <div>
-                {props.position[0]}
-              </div>
-            
-            </animated.div>
-          )}
-      </div> */}
+      <HUD {...{movers, setMovers, pillars}}/>
     </>
   );
 }
-function spawnMover(movers, setMovers) {
+
+function BattleMap(props) {
+  const {pillars, movers, setMovers} = props;
+  useFrame(() => {
+    // console.log(movers);
+    if (moversBZoomin && movers.length && Math.random() < .02 ) {
+      console.log('firing')
+      const targetMover = getRandomEntry(movers);
+      const targetPillar = getRandomEntry(pillars);
+      console.log(targetMover, targetPillar);
+      moverToPillar(targetMover, targetPillar, setMovers, movers);
+    } else {
+      // console.log(frame);
+    }
+  })
+  return (
+    <>
+      { pillars.map(pillar => <HexPillar key={pillar.key} {...pillar} /> )}
+      { movers.map(mover => <HexMover key={mover.key} {...mover} /> )}
+    </>
+  )
+}
+
+function HUD(props) {
+  const {movers, setMovers, pillars } = props;
+  console.log(props);
+  return (
+      <div style={{position: 'absolute', top: '0px', right: '0px'}} >
+      {props.movers.map(mover =>
+        <div key={mover.key}>
+          <button key={mover.key}
+            onClick={ e=> {
+              setMovers(movers.map(tempMover => {
+                return {...tempMover, active: mover.key === tempMover.key ? !mover.active : tempMover.active }
+              }))
+            }}
+            >
+            { mover.key }
+            { mover.active ? ' active':'' }
+          </button>
+        </div>)}
+      <div>
+        <button onClick={ e=> spawnMover(movers, setMovers, pillars)}> + </button>
+      </div>
+    </div>
+  )
+}
+function spawnMover(movers, setMovers, pillars) {
+  const targetPillar = getRandomEntry(pillars);
   let tempMovers = movers.map(mover => ({...mover, active: false}));
+  const {position: [x, y, z], userData: {pillarHeight}} = targetPillar;
+
   tempMovers = [...tempMovers, {
     key: movers.length + 1,
     active: true,
-    position: [6, 6, 6]
+    color:  getRandomEntry(colors),
+    position: [x + .5 * HEX_W, y + .5 * HEX_H, pillarHeight + 1 + z]
   }];
   setMovers(tempMovers);
-
 }
+
+
+
 function CameraControls() {
   const { gl: { domElement }, camera } = useThree();
-  useFrame(({ gl, scene, camera }) => gl.render(scene, camera), 1);
+  useFrame(({ gl, scene, camera }) => {
+    myStats.update();
+    gl.render(scene, camera)
+  }, 1);
   return <orbitControls args={[camera, domElement]} />
 }
 
-function getPillars(setMovers, setMoverPosition, movers) {
-  const maxColumns = 10;
-  const maxRows = 10;
-  const retval = []
-  for (let colIndex = -maxColumns/2; colIndex < maxColumns/2; colIndex++) {
-    for (let rowIndex = -maxRows/2; rowIndex < maxRows/2; rowIndex++) {
-      retval.push({
-        key: 'col' + colIndex + 'row' + rowIndex,
-        // position: [colIndex, 0, rowIndex ],
-        userData: {
-          column: colIndex,
-          row: rowIndex,
-          depth: rowIndex + colIndex,
-          pillarClicked: pillarClicked,
-          setMovers: setMovers,
-          setMoverPosition:setMoverPosition,
-          movers,
-          pillarHeight: Math.abs(rowIndex) + Math.abs(colIndex)
-        }
-      });
-    }    
-  }
-  return retval;
-}
+
 export default App;
