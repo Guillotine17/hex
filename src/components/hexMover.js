@@ -1,6 +1,6 @@
 import React, {useState, useRef} from 'react';
 import * as THREE from 'three';
-import {useSpring, animated} from 'react-spring'
+import {useSpring, animated, config} from 'react-spring'
 import { useFrame } from 'react-three-fiber'
 
 function HexMover(props) {
@@ -10,7 +10,7 @@ function HexMover(props) {
   if (x !== position.x || y !== position.y || z !== position.z) {
     set({x, y, z});
   }
-  const {ax, ay, az} = useSpring({to: {ax: position.x, ay: position.y, az: position.z}, from: {ax: 0, ay: 0, az: 0}});
+  const {ax, ay, az} = useSpring({to: {ax: position.x, ay: position.y, az: position.z}, from: {ax: 0, ay: 0, az: 0}, config: config.gentle});
   useFrame((state) => {
     mesh.current.position.x = ax.value;
     mesh.current.position.y = ay.value;
