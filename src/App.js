@@ -10,7 +10,7 @@ import * as Stats from 'stats.js';
 // import ReactDOM from 'react-dom'
 
 
-const moversBZoomin = false;
+const moversBZoomin = true;
 const debugStats = true;
 
 function moverToPillar(targetMover, pillar, setMovers, movers) {
@@ -31,14 +31,15 @@ function createStats() {
   stats.domElement.style.top = '0';
   return stats;
 }
+
 if (debugStats) {
   var myStats = createStats();
   document.body.appendChild( myStats.domElement );
 }
 
-
 function App() {
   const [movers, setMovers] = useState([]);
+  const [mode, setMode] = useState('ACTIVE');
   const [pillars, setPillars] = useState(getPillars());
   // let pillars = getPillars(setMovers, movers);
   return (
@@ -46,9 +47,10 @@ function App() {
       <Canvas camera={{ fov: 45, position: [0, 0, 100] }}>
         <ambientLight />
         <pointLight position={[10, 10, 10]} />
-        <BattleMap {...{pillars, movers, setMovers, setPillars}}/>
+        <BattleMap {...{pillars, movers, setMovers, setPillars, mode}}/>
         <CameraControls/>
       </Canvas>
+      <ModeToggle {...{mode, setMode}}/>
       <HUD {...{movers, setMovers, pillars}}/>
     </>
   );
@@ -67,21 +69,23 @@ function getAddPoints(pillars) {
           return (pillar.userData.column === colIndex && pillar.userData.row === rowIndex);
         })) continue;
         const[x, y, z] = getPosition(rowIndex, colIndex)
-        initialAddPoints.push({
-          row: rowIndex,
-          col: colIndex,
-          key: 'col' + colIndex + 'row' + rowIndex,
-          position: [x + .5*HEX_W - 1 , y + .5*HEX_H - 1, z],
-        })
+        initialAddPoints.push(getAddPoint({rowIndex, colIndex, position: [x,y,z]}));
       }
       
     }
   });
   return initialAddPoints;
 }
-
+function getAddPoint({rowIndex, colIndex, position: [x,y,z]}) {
+  return {
+    row: rowIndex,
+    col: colIndex,
+    key: 'col' + colIndex + 'row' + rowIndex,
+    position: [x + .5 * HEX_W - 1 , y + .5 * HEX_H - 1, z],
+  }
+}
 function BattleMap(props) {
-  const {pillars, movers, setMovers, setPillars} = props;
+  const {pillars, movers, setMovers, setPillars, mode} = props;
   const [addPoints, setAddPoints] = useState(getAddPoints(pillars)); 
   useFrame(() => {
     // console.log(movers);
@@ -100,21 +104,42 @@ function BattleMap(props) {
       {addPoints.map(addPoint => 
       <AddPoint
           {...addPoint}
-          userData={{key: addPoint.key,
-                     movers,
-                     setMovers,
-                     addPoints,
-                     setAddPoints,
-                     getPillar,
-                     setPillars,
-                     pillars}}
+          userData={{ key: addPoint.key,
+                      movers,
+                      setMovers,
+                      addPoints,
+                      setAddPoints,
+                      getPillar,
+                      setPillars,
+                      pillars,
+                      mode
+                    }}
       />)}
-      { pillars.map(pillar => <HexPillar {...pillar} userData={{ ...pillar.userData, setMovers, movers}} key={pillar.key}  /> )}
+      { pillars.map(pillar => 
+        <HexPillar
+            {...pillar} 
+            userData={{
+              ...pillar.userData,
+              key: pillar.key,
+            setMovers,
+            movers,
+            pillars,
+            setPillars,
+            addPoints,
+            setAddPoints,
+            getAddPoint,
+            mode}}
+            key={pillar.key}  /> )}
       { movers.map(mover => <HexMover key={mover.key} {...mover} /> )}
     </>
   )
 }
-
+function ModeToggle(props) {
+  const { mode, setMode } = props;
+  return (
+    <button style={{position: "absolute", bottom: '0px', left: '0px'}} onClick={e => setMode(mode === 'ACTIVE' ? 'EDIT' : 'ACTIVE')}>CURRENT: {props.mode}</button>
+  )
+}
 function HUD(props) {
   const {movers, setMovers, pillars } = props;
   console.log(props);
@@ -156,27 +181,11 @@ function spawnMover(movers, setMovers, pillars) {
 function AddPoint(props) {
   const [hovered, setHover] = useState(false)
   const [clicked, setClicked] = useState(false)
-  const {row, col, userData: {key, movers, setMovers, addPoints, setAddPoints, getPillar, setPillars, pillars}} = props;
+  const {row, col, userData: {key, movers, setMovers, addPoints, setAddPoints, getPillar, setPillars, pillars, mode}} = props;
   const mesh = useRef();
 
-  let handlePointerOver = (e) => setHover(true);
-  let handlePointerOut = (e) => {if (!clicked) setHover(false);}
-  useEffect(() => {
-    const div = mesh.current;
-
-    div.addEventListener('pointerout', handlePointerOut)
-    // div.onPointerOver = handlePointerOver;
-    // div.onPointerOver = handlePointerOver;
-    return () => {
-      console.log(div);
-      // div._listeners = undefined;
-      // throw new Error('yeet');
-      // div.onPointerOut = null;
-
-      // div.removeEventListener('pointerout', handlePointerOut)
-      // div.removeEventListener('pointerout', handlePointerOver)
-    };
-  }, [])
+  const handlePointerOver = (e) => setHover(true);
+  const handlePointerOut = (e) => {if (!clicked) setHover(false);}
   function convertToHexPillar(e) {
     setClicked(true);
     console.log(e.eventObject)
@@ -189,6 +198,7 @@ function AddPoint(props) {
   }
   return (
     <mesh
+      visible={mode !== 'ACTIVE'}
       ref={mesh}
       onPointerOver={handlePointerOver}
       onPointerOut={handlePointerOut}

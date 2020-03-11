@@ -16,7 +16,7 @@ function getPosition(row, col) {
     return [x, y, 0];
 }
 function HexPillar(props) {
-    const { userData } = props;
+    const { userData: {mode, pillarHeight, addPoints, setAddPoints, setPillars, pillars, getAddPoint, row, column, key}} = props;
     const shape = useMemo(() => {
         var hexFaceShape = new THREE.Shape();
         hexFaceShape.moveTo(0, 0.75 * HEX_H)
@@ -30,7 +30,27 @@ function HexPillar(props) {
       }, [])
     const [hovered, setHover] = useState(false)
     const [active, setActive] = useState(false)
-    const { userData: { pillarHeight } } = props;
+    const [clicked, setClicked] = useState(false)
+    const { userData } = props;
+
+    const handlePointerOver = (e) => setHover(true);
+    const handlePointerOut = (e) => {if (!clicked) setHover(false);}
+    function convertToAddPoint() {
+        setAddPoints([...addPoints, getAddPoint({rowIndex: row, colIndex: column, position: getPosition(row, column)})]);
+        setPillars(pillars.filter((pillar) => pillar.key !== key));
+    }
+    function handleOnClick(e) {
+        // convert to addpoint
+        if (mode === 'EDIT') {
+            setClicked(true);
+            convertToAddPoint()
+        } else {
+            // send mover here/generate mover
+            props.userData.pillarClicked({...props, ...userData, position}, e);
+        }
+
+
+    }
     const position = getPosition(props.userData.row, props.userData.column);
     return (
         <mesh
@@ -39,13 +59,9 @@ function HexPillar(props) {
             visible={!active || hovered}
             position={position}
             rotation={[0, 0, 0]}
-            onClick={e => { 
-                props.userData.pillarClicked({...props, ...userData, position}, e);
-            }}
-            onPointerOver={e => {
-                setHover(true)
-            }}
-            onPointerOut={e => setHover(false)}
+            onClick={handleOnClick}
+            onPointerOver={handlePointerOver}
+            onPointerOut={handlePointerOut}
         >
             <meshStandardMaterial attach="material" color={hovered ? 'hotpink' : 'orange'} />
             <extrudeGeometry attach="geometry"  args={[shape, {bevelEnabled: false, steps: 2,
