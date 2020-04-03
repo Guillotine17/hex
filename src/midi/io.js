@@ -1,0 +1,98 @@
+class IO {
+  constructor(midiCallback) {
+      this.devices = [];
+      this.index = -1;
+      this.callback = midiCallback;
+      this.controller = null;
+      this.source = null;
+      this.install = (host) => {
+    
+      };
+    
+      this.start = (callback) => {
+        this.refresh();
+        console.log('IO', 'Starting..');
+      };
+    
+      this.connect = (source = 'USB Trigger Finger', controller = 'LPD8') => {
+        this.controller = this.find(controller);
+        this.source = this.find(source);
+    
+        if (!this.controller) {
+          console.warn('IO', 'Could not connect ' + controller);
+        } else {
+          console.info('IO', 'Connected to controller ' + this.controller.name);
+          this.controller.onmidimessage = this.onControl;
+        }
+    
+        if (!this.source) {
+          console.warn('IO', 'Could not connect ' + source);
+        } else {
+          console.info('IO', 'Connected to source ' + this.source.name);
+          this.source.onmidimessage = this.onMessage;
+        }
+      };
+    
+      this.find = (name) => {
+        for (const device of this.devices) {
+          if (device.name.indexOf(name) < 0) { continue; }
+          return device;
+        }
+      };
+    
+      this.refresh = () => {
+        if (!navigator.requestMIDIAccess) { return; }
+        navigator.requestMIDIAccess().then(this.access, (err) => {
+          console.warn('No Midi', err);
+        });
+      };
+    
+      this.list = () => {
+        for (const device of this.devices) {
+          console.info('IO', device.name);
+        }
+      };
+    
+      this.onControl = (msg) => {
+        console.log('knob', msg.data);
+      };
+    
+      this.onMessage = (msg) => {
+        // console.log(msg);
+        if (msg.data[0] >= 144 && msg.data[0] < 160) {
+          const ch = msg.data[0] - 144;
+          const pad = msg.data[1] - 24;
+          const vel = msg.data[2];
+          if (vel > 0) {
+              this.callback({ch, pad, vel});
+            // client.rack.play(ch, pad, vel);
+            // console.log('play');
+            
+          }
+        } else if (msg.data[0] >= 176 && msg.data[0] < 184) {
+          const ch = msg.data[0] - 176;
+          const knob = msg.data[1] - 64;
+          const val = msg.data[2];
+        //   client.mixer.tweak(ch, knob, val);
+          console.log('control');
+    
+        }
+      };
+    
+      this.access = (midiAccess) => {
+        console.log('in access');
+        const inputs = midiAccess.inputs.values();
+        console.log(inputs);
+        this.devices = [];
+        for (let i = inputs.next(); i && !i.done; i = inputs.next()) {
+          console.log(i);
+          this.devices.push(i.value);
+        }
+        console.log(this.devices);
+        this.connect();
+      };
+  }
+
+}
+
+export default IO;

@@ -7,11 +7,21 @@ import * as THREE from 'three';
 import {HEX_SIZE, HEX_W, HEX_H, colors, addPillarRadius} from './constants';
 import './App.css';
 import * as Stats from 'stats.js';
+import * as Tone from 'tone';
+import IO from './midi/io';
+
 // import ReactDOM from 'react-dom'
 
+import { messageService } from './services/messageService';
 
-const moversBZoomin = true;
+function midiCallback(event) {
+  console.log(event);
+  messageService.sendMessage(event);
+}
+const moversBZoomin = false;
 const debugStats = true;
+const io = new IO(midiCallback);
+io.start(midiCallback);
 
 function moverToPillar(targetMover, pillar, setMovers, movers) {
   console.log(pillar)
@@ -41,7 +51,6 @@ function App() {
   const [movers, setMovers] = useState([]);
   const [mode, setMode] = useState('ACTIVE');
   const [pillars, setPillars] = useState(getPillars());
-  // let pillars = getPillars(setMovers, movers);
   return (
     <>
       <Canvas camera={{ fov: 45, position: [0, 0, 100] }}>
@@ -76,6 +85,7 @@ function getAddPoints(pillars) {
   });
   return initialAddPoints;
 }
+
 function getAddPoint({rowIndex, colIndex, position: [x,y,z]}) {
   return {
     row: rowIndex,
@@ -134,12 +144,14 @@ function BattleMap(props) {
     </>
   )
 }
+
 function ModeToggle(props) {
   const { mode, setMode } = props;
   return (
     <button style={{position: "absolute", bottom: '0px', left: '0px'}} onClick={e => setMode(mode === 'ACTIVE' ? 'EDIT' : 'ACTIVE')}>CURRENT: {props.mode}</button>
   )
 }
+
 function HUD(props) {
   const {movers, setMovers, pillars } = props;
   console.log(props);
